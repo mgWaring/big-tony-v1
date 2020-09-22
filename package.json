@@ -1,0 +1,10 @@
+{
+  "name": "big-tony-v1",
+  "version": "1.0.0",
+  "description": "A discord bot to start minecraft servers",
+  "main": "tony.js",
+  "repository": "git@github.com:mgWaring/big-tony-v1.git",
+  "author": "Max <mgwaring0@gmail.com>",
+  "license": "MIT",
+  "private": false
+}
