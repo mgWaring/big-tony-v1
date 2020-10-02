@@ -58,16 +58,10 @@ const flattenResToId = (data) => {
 }
 
 const formatDescription = (data) => {
-    return {
-        count: data.Reservations[0].Instances.length,
-        breakdown: data.Reservations.reduce(
-            (s, res) => {
-                res.Instances.forEach(i => s.concat(`  ${i.InstanceId} | ${i.PublicIpAddress} | ${i.State.Name}\n`))
-                return s
-            },
-            ''
-        )
-    }
+    return data.Reservations.reduce((s, res) => {
+        res.Instances.forEach(i => s += `  ${i.InstanceId} | ${i.PublicIpAddress} | ${i.State.Name}\n`)
+        return s
+    }, `There are ${data.Reservations.length} Instances:\n`)
 }
 
 const instantiate = (launchCommand) => {

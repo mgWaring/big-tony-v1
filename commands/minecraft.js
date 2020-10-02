@@ -82,7 +82,7 @@ const stopServer = async () => {
 const getInstanceStatus = () => {
     describe()
         .then(data => formatDescription(data))
-        .then(description => vox.say(`There are ${description.count} Instances:\n` + description.breakdown))
+        .then(description => vox.say(description))
         .catch(e => vox.cri(e))
 }
 
