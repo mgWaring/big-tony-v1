@@ -1,6 +1,8 @@
 const AWS = require('aws-sdk')
 
-AWS.config.loadFromPath('./spare/aws.json')
+const {awsConfig} = require('../config/config')
+
+AWS.config.update(awsConfig)
 
 const ec2 = new AWS.EC2()
 const cw = new AWS.CloudWatch()

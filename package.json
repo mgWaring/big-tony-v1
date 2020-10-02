@@ -7,13 +7,14 @@
   "author": "Max <mgwaring0@gmail.com>",
   "license": "MIT",
   "private": false,
-  "scripts":{
+  "scripts": {
     "start": "node tony.js"
   },
   "dependencies": {
     "aws-sdk": "^2.758.0",
     "discord": "^0.8.2",
     "discord.io": "https://github.com/woor/discord.io/tarball/gateway_v6",
+    "dotenv": "^8.2.0",
     "winston": "^3.3.3"
   }
 }

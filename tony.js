@@ -1,12 +1,18 @@
+if (process.env.ENV !== 'production') {
+    require('dotenv').config();
+}
+
 const Discord = require('discord.io');
 const winston = require('winston');
-const auth = require('./spare/auth.json');
-
+const { tonyConfig } = require('./config/config');
+console.log(tonyConfig)
 const targetChannel = 757999018386391140
+
 const bot = new Discord.Client({
-    token: auth.token,
+    token: tonyConfig.token,
     autorun: true
 })
+
 const commands = {
     'hi': require('./commands/hi'),
     'minecraft': require('./commands/minecraft'),

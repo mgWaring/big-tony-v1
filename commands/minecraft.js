@@ -1,5 +1,4 @@
 const config = require('../config/minecraft.json')
-const AWS = require('aws-sdk')
 const {
     addAlarm,
     awaitStatus,
@@ -24,8 +23,6 @@ const logger = winston.createLogger({
         new winston.transports.Console({ colorize: true, level: 'silly' }),
     ],
 });
-
-AWS.config.loadFromPath('./spare/aws.json')
 
 const vox = {
     channel: null,

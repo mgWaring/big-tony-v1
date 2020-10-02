@@ -1,6 +1,7 @@
 # additions
 spare/**
 scratch.js
+.env
 
 # Logs
 logs
