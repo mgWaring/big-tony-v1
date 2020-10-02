@@ -2,6 +2,18 @@ if (process.env.ENV !== 'production') {
     require('dotenv').config();
 }
 
+const express = require('express')
+const app = express()
+const port = 3000
+
+app.get('/', (req, res) => {
+  res.send('Hello World! I\'m Tony')
+})
+
+app.listen(port, () => {
+  console.log(`Example app listening at http://localhost:${port}`)
+})
+
 const Discord = require('discord.io');
 const winston = require('winston');
 const { tonyConfig } = require('./config/config');
