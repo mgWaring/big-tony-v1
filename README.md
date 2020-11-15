@@ -1,9 +1,1 @@
-B
-
-B
-D
-D
-D
-D
-D
-BLah blah blah
+Playng around with discord bots and aws services
