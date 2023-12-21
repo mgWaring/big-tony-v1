@@ -1,4 +1,6 @@
-module.exports = (bot, channelID, args, user) => {
+import { Command } from "../tony"
+
+const hi: Command = (bot, channelID, args, user) => {
     let str = args.join(' ')
     let message = `Hey ${str}, ${user} says hello!`
 
@@ -12,3 +14,5 @@ module.exports = (bot, channelID, args, user) => {
         message: message
     });
 }
+
+export default hi;

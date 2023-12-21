@@ -1,4 +1,4 @@
-const awsConfig = {
+export const awsConfig = {
     secretAccessKey: process.env.AWS_SECRET,
     accessKeyId: process.env.KEY_ID,
     region: "eu-west-2",
@@ -9,11 +9,16 @@ const awsConfig = {
     }
 }
 
-const tonyConfig = {
-    token: process.env.TOKEN
+export const tonyConfig = {
+    token: process.env.TOKEN,
 }
 
-module.exports = { 
+export default { 
     awsConfig, 
     tonyConfig 
 };
+
+export const minecraftVariables = {
+    "EULA": "TRUE",
+    "WORLD": "/worlds/Beans.zip"
+}

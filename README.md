@@ -1,1 +1,1 @@
-Playng around with discord bots and aws services
+Playing around with discord bots and aws services

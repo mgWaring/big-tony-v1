@@ -1,21 +1,29 @@
 {
   "name": "big-tony-v1",
   "version": "1.0.0",
+  "licence": "MIT",
   "description": "A discord bot to start minecraft servers",
-  "main": "tony.js",
+  "engines": {
+    "node": "^20.0.0"
+  },
+  "main": "dist/tony.js",
   "repository": "git@github.com:mgWaring/big-tony-v1.git",
   "author": "Max <mgwaring0@gmail.com>",
   "license": "MIT",
   "private": false,
   "scripts": {
-    "start": "node tony.js"
+    "start": "node dist/tony.js",
+    "build": "tsc"
   },
   "dependencies": {
-    "aws-sdk": "^2.758.0",
-    "discord": "^0.8.2",
-    "discord.io": "https://github.com/woor/discord.io/tarball/gateway_v6",
-    "dotenv": "^8.2.0",
-    "express": "^4.17.1",
-    "winston": "^3.3.3"
+    "@aws-sdk/client-s3": "^3.478.0",
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.4",
+    "typescript": "^5.3.3"
   }
 }

@@ -1,6 +1,8 @@
-const AWS = require('aws-sdk')
+import AWS, { AWSError, EC2 } from 'aws-sdk'
 
-const {awsConfig} = require('../config/config')
+import { awsConfig } from '../config/config'
+import { PromiseResult } from 'aws-sdk/lib/request'
+import { WaiterConfiguration } from 'aws-sdk/lib/service'
 
 AWS.config.update(awsConfig)
 
@@ -8,8 +10,11 @@ const ec2 = new AWS.EC2()
 const cw = new AWS.CloudWatch()
 const ssm = new AWS.SSM()
 
-const addAlarm = (data) => {
-    const alarm = {
+export const addAlarm = (data: PromiseResult<EC2.DescribeInstancesResult, AWSError>) => {
+    if (!data.Reservations) throw new Error("No reservations")
+    if (!data.Reservations[0].Instances) throw new Error("No instances")
+    if (!data.Reservations[0].Instances[0].InstanceId) throw new Error("No instance id")
+    const alarm: AWS.CloudWatch.PutMetricAlarmInput = {
         AlarmName: "beans-has-no-friends",
         ComparisonOperator: 'LessThanThreshold',
         EvaluationPeriods: 5,
@@ -31,8 +36,10 @@ const addAlarm = (data) => {
     return cw.putMetricAlarm(alarm).promise()
 }
 
-const awaitStatus = (data) => {
-    const targets = {
+export const awaitStatus = (data: PromiseResult<EC2.Reservation, AWSError>) => {
+    if (!data.Instances) throw new Error("No instances")
+    if (!data.Instances[0].InstanceId) throw new Error("No instance id")
+    const targets: EC2.Types.DescribeInstancesRequest & { $waiter?: WaiterConfiguration } = {
         InstanceIds: [
             data.Instances[0].InstanceId
         ]
@@ -40,7 +47,7 @@ const awaitStatus = (data) => {
     return ec2.waitFor('instanceRunning', targets).promise()
 }
 
-const describe = () => {
+export const describe = () => {
     const targets = {
         Filters: [
             {
@@ -52,21 +59,33 @@ const describe = () => {
     return ec2.describeInstances(targets).promise()
 }
 
-const flattenResToId = (data) => {
-    return data.Reservations.reduce((list, reserved) => {
-        reserved.Instances.forEach(i => list.push(i.InstanceId))
+export const flattenResToId = (data: PromiseResult<EC2.DescribeInstancesResult, AWSError>): string[] => {
+    if (!data.Reservations) throw new Error("No reservations")
+    return data.Reservations.reduce((list: string[], reserved) => {
+        if (!reserved.Instances) throw new Error("No instances")
+        reserved.Instances.forEach(i => {
+            if (!i.InstanceId) throw new Error("No instance id")
+            list.push(i.InstanceId)
+        })
         return list
     }, [])
 }
 
-const formatDescription = (data) => {
+export const formatDescription = (data: PromiseResult<EC2.DescribeInstancesResult, AWSError>) => {
+    if (!data.Reservations) throw new Error("No reservations")
     return data.Reservations.reduce((s, res) => {
-        res.Instances.forEach(i => s += `  ${i.InstanceId} | ${i.PublicIpAddress} | ${i.State.Name}\n`)
+        if (!res.Instances) throw new Error("No instances")
+        res.Instances.forEach(i => {
+            if (!i.InstanceId) throw new Error("No instance id")
+            if (!i.PublicIpAddress) throw new Error("No public ip")
+            if (!i.State) throw new Error("No state")
+            s += `  ${i.InstanceId} | ${i.PublicIpAddress} | ${i.State.Name}\n`
+        })
         return s
     }, `There are ${data.Reservations.length} Instances:\n`)
 }
 
-const instantiate = (launchCommand) => {
+export const instantiate = (launchCommand: string) => {
     const instanceParams = {
         ImageId: 'ami-0a669382ea0feb73a',
         InstanceType: 't3a.small',
@@ -92,11 +111,11 @@ const instantiate = (launchCommand) => {
     return ec2.runInstances(instanceParams).promise()
 }
 
-const pauseFor = (t) => new Promise(res => setTimeout(res, t * 1000))
+export const pauseFor = (t: number) => new Promise(res => setTimeout(res, t * 1000))
 
-const shutDown = (instances) => ec2.terminateInstances({ InstanceIds: instances }).promise()
+export const shutDown = (instances: string[]) => ec2.terminateInstances({ InstanceIds: instances }).promise()
 
-const triggerSave = () => {
+export const triggerSave = () => {
     const parameters = {
         DocumentName: 'save-beans-minecraft-world',
         Targets: [
@@ -107,17 +126,5 @@ const triggerSave = () => {
         ]
     }
     return ssm.sendCommand(parameters).promise()
-}
-
-module.exports = {
-    addAlarm,
-    awaitStatus,
-    describe,
-    flattenResToId,
-    formatDescription,
-    instantiate,
-    pauseFor,
-    shutDown,
-    triggerSave
 }
 
