@@ -11,6 +11,8 @@ export const awsConfig = {
 
 export const tonyConfig = {
     token: process.env.TOKEN,
+    clientId: process.env.CLIENT_APP_ID,
+	guildId: process.env.SERVER_ID,
 }
 
 export default { 

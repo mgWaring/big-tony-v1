@@ -1,14 +1,17 @@
-import { minecraftVariables } from '../config/config';
-import { addAlarm, awaitStatus, describe, flattenResToId, formatDescription, instantiate, pauseFor, shutDown, triggerSave } from '../aws_helpers/helpers';
+import { minecraftVariables } from '../../config/config';
+import {
+    addAlarm,
+    awaitInstance,
+    describe,
+    flattenResToId,
+    formatDescription,
+    instantiate,
+    pauseFor,
+    shutDown,
+    triggerSave
+} from '../../aws_helpers/helpers';
 import { createLogger, format as _format, transports as _transports } from 'winston';
-import { Command } from '../tony';
-
-interface Vox {
-    channel: string;
-    bot: any;
-    say: (message: string) => void;
-    cri: (e: Error) => void;
-}
+import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 
 const logger = createLogger({
     level: 'info',
@@ -19,16 +22,6 @@ const logger = createLogger({
         new _transports.File({ filename: 'general.log' }),
     ],
 });
-
-const vox: Vox = {
-    channel: '',
-    bot: {},
-    say: (message: string) => vox.bot.sendMessage({ to: vox.channel, message: message }),
-    cri: (e: Error) => {
-        logger.error(e)
-        vox.say(`something broke, sorry: ${JSON.stringify(e)}`)
-    }
-}
 
 // turns an object into a string of -e KEY=VALUE (turns json into env var like syntax)
 const envStr = (o: { [key: string]: string }) => Object.keys(o).reduce((p, k) => p + ' -e ' + k + '=' + o[k], '')
@@ -43,79 +36,80 @@ docker container create -v ~/worlds:/worlds ${envStr(minecraftVariables)} --name
 docker start -a beans
 `
 
-const startServer = async () => {
+const startServer = async (interaction: ChatInputCommandInteraction) => {
     try {
-        const instance = await instantiate(launchCommand);
-        const status = await awaitStatus(instance);
-        if (status.$response.error) throw new Error(status.$response.error.message)
-        if (!status.Reservations?.[0]?.Instances) throw new Error("Instance not running")
-        vox.say(`Started on ${status.Reservations[0].Instances[0].PublicIpAddress}`)
+        const reservation = await instantiate(launchCommand);
+        const status = await awaitInstance(reservation);
+        if(!reservation.Instances) throw new Error("No instances reserved")
+
+        interaction.followUp(`Started on ${reservation.Instances[0].PublicIpAddress}`)
         await pauseFor(60)
         logger.info("wait over")
         const server = await describe()
         await addAlarm(server)
     }
     catch (e: any) {
-        vox.cri(e.message)
+        logger.error(e.message)
     }
 }
 
-const stopServer = async () => {
+const stopServer = async (interaction: ChatInputCommandInteraction) => {
     try {
         const saveData = await triggerSave()
         logger.info("run command sent", saveData)
-        vox.say(`Level saved (I hope...)`)
+
+        interaction.followUp(`Level saved (I hope...)`)
 
         await pauseFor(60)
         logger.info("wait over")
-        const description = await describe()
+        const description = describe()
         const instances = flattenResToId(description)
         const shutdownResponse = await shutDown(instances)
 
         logger.info(shutdownResponse)
-        vox.say(`All Beans have been crushed (${shutdownResponse?.TerminatingInstances?.length} Instances terminated)`)
+
+        interaction.followUp(`All Beans have been crushed (${shutdownResponse?.TerminatingInstances?.length} Instances terminated)`)
 
     } catch (e: any) {
-        vox.cri(e.message)
+        logger.error(e.message)
     }
 }
 
-const getInstanceStatus = async () => {
+const getInstanceStatus = async (interaction: ChatInputCommandInteraction) => {
     try {
         const description = await describe()
         const formatted = formatDescription(description)
-        vox.say(formatted)
-    } catch (e: any) { vox.cri(e) }
+
+        interaction.followUp(formatted)
+    } catch (e: any) { logger.error(e) }
 }
 
-const minecraft: Command = (bot, channelID, args, user) => {
-    let input = args.join(' ').trim()
-    vox.channel = channelID
-    vox.bot = bot
 
-    let message: string;
+export const data = new SlashCommandBuilder()
+    .setName('minecraft')
+    .setDescription('establishes a minecraft server');
 
-    switch (input) {
+export const execute = async (interaction: ChatInputCommandInteraction) => {
+    const params = interaction.options.data.map((option: any) => option.value)
+    let message = ''
+    switch (params[0]) {
         case 'start':
-            startServer()
+            startServer(interaction)
             message = "starting"
             break;
         case 'stop':
-            stopServer()
+            stopServer(interaction)
             message = "stopping"
             break;
         case 'destroy':
             message = "destroying"
             break;
         case 'status':
-            getInstanceStatus()
+            getInstanceStatus(interaction)
             message = "fetching status"
             break;
         default:
-            message = args ? `what does ${input} mean?` : "you have to tell me what to do..."
+            message = params ? `what does ${params[0]} mean?` : "you have to tell me what to do..."
     }
-
-    vox.say(message)
+    await interaction.reply(message);
 }
-
-export default minecraft;

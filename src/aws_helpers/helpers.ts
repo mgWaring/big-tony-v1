@@ -1,4 +1,18 @@
-import AWS, { AWSError, EC2 } from 'aws-sdk'
+import AWS from 'aws-sdk';
+
+import { ServiceException } from '@smithy/smithy-client';
+import { CloudWatch, PutMetricAlarmCommandInput } from '@aws-sdk/client-cloudwatch';
+
+import {
+    DescribeInstancesCommandInput,
+    DescribeInstancesCommandOutput,
+    EC2,
+    RunInstancesCommandInput,
+    RunInstancesCommandOutput,
+    waitUntilInstanceRunning,
+} from '@aws-sdk/client-ec2';
+
+import { SSM } from '@aws-sdk/client-ssm';
 
 import { awsConfig } from '../config/config'
 import { PromiseResult } from 'aws-sdk/lib/request'
@@ -6,15 +20,15 @@ import { WaiterConfiguration } from 'aws-sdk/lib/service'
 
 AWS.config.update(awsConfig)
 
-const ec2 = new AWS.EC2()
-const cw = new AWS.CloudWatch()
-const ssm = new AWS.SSM()
+const ec2 = new EC2()
+const cw = new CloudWatch()
+const ssm = new SSM()
 
-export const addAlarm = (data: PromiseResult<EC2.DescribeInstancesResult, AWSError>) => {
+export const addAlarm = (data: DescribeInstancesCommandOutput) => {
     if (!data.Reservations) throw new Error("No reservations")
     if (!data.Reservations[0].Instances) throw new Error("No instances")
     if (!data.Reservations[0].Instances[0].InstanceId) throw new Error("No instance id")
-    const alarm: AWS.CloudWatch.PutMetricAlarmInput = {
+    const alarm: PutMetricAlarmCommandInput = {
         AlarmName: "beans-has-no-friends",
         ComparisonOperator: 'LessThanThreshold',
         EvaluationPeriods: 5,
@@ -33,18 +47,21 @@ export const addAlarm = (data: PromiseResult<EC2.DescribeInstancesResult, AWSErr
             }
         ]
     }
-    return cw.putMetricAlarm(alarm).promise()
+    return cw.putMetricAlarm(alarm);
 }
 
-export const awaitStatus = (data: PromiseResult<EC2.Reservation, AWSError>) => {
-    if (!data.Instances) throw new Error("No instances")
-    if (!data.Instances[0].InstanceId) throw new Error("No instance id")
-    const targets: EC2.Types.DescribeInstancesRequest & { $waiter?: WaiterConfiguration } = {
+export const awaitInstance = (reservation: RunInstancesCommandOutput) => {
+    if (!reservation.Instances) throw new Error("No instances")
+    if (!reservation.Instances[0].InstanceId) throw new Error("No instance id")
+    const targets: DescribeInstancesCommandInput & { $waiter?: WaiterConfiguration } = {
         InstanceIds: [
-            data.Instances[0].InstanceId
+            reservation.Instances[0].InstanceId
         ]
     }
-    return ec2.waitFor('instanceRunning', targets).promise()
+    return waitUntilInstanceRunning({
+        client: ec2,
+        maxWaitTime: 200
+    }, targets);
 }
 
 export const describe = () => {
@@ -56,10 +73,10 @@ export const describe = () => {
             }
         ]
     }
-    return ec2.describeInstances(targets).promise()
+    return ec2.describeInstances(targets);
 }
 
-export const flattenResToId = (data: PromiseResult<EC2.DescribeInstancesResult, AWSError>): string[] => {
+export const flattenResToId = (data: DescribeInstancesCommandOutput): string[] => {
     if (!data.Reservations) throw new Error("No reservations")
     return data.Reservations.reduce((list: string[], reserved) => {
         if (!reserved.Instances) throw new Error("No instances")
@@ -71,7 +88,7 @@ export const flattenResToId = (data: PromiseResult<EC2.DescribeInstancesResult, 
     }, [])
 }
 
-export const formatDescription = (data: PromiseResult<EC2.DescribeInstancesResult, AWSError>) => {
+export const formatDescription = (data: PromiseResult<DescribeInstancesCommandOutput, ServiceException>) => {
     if (!data.Reservations) throw new Error("No reservations")
     return data.Reservations.reduce((s, res) => {
         if (!res.Instances) throw new Error("No instances")
@@ -86,7 +103,7 @@ export const formatDescription = (data: PromiseResult<EC2.DescribeInstancesResul
 }
 
 export const instantiate = (launchCommand: string) => {
-    const instanceParams = {
+    const instanceParams : RunInstancesCommandInput = {
         ImageId: 'ami-0a669382ea0feb73a',
         InstanceType: 't3a.small',
         KeyName: 'default',
@@ -108,12 +125,12 @@ export const instantiate = (launchCommand: string) => {
         ]
     }
 
-    return ec2.runInstances(instanceParams).promise()
+    return ec2.runInstances(instanceParams);
 }
 
 export const pauseFor = (t: number) => new Promise(res => setTimeout(res, t * 1000))
 
-export const shutDown = (instances: string[]) => ec2.terminateInstances({ InstanceIds: instances }).promise()
+export const shutDown = (instances: string[]) => ec2.terminateInstances({ InstanceIds: instances })
 
 export const triggerSave = () => {
     const parameters = {
@@ -125,6 +142,6 @@ export const triggerSave = () => {
             }
         ]
     }
-    return ssm.sendCommand(parameters).promise()
+    return ssm.sendCommand(parameters);
 }
 
